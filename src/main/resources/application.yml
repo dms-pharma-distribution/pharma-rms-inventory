@@ -3,9 +3,9 @@ spring:
     name: pharma-rms-inventory 
   datasource:
     driver-class-name: org.postgresql.Driver
-    url: jdbc:postgresql://127.0.0.1:5432/smartpharmadb?searchpath=rms_inventory_schema
+    url: jdbc:postgresql://127.0.0.1:5432/smartpharma_db?searchpath=rms_inventory_schema
     username: postgres
-    password: admin
+    password: 1234
   jpa:
     open-in-view: false
     hibernate:

@@ -97,33 +97,47 @@ public class RetailerProductServiceImpl implements RetailerProductService {
 		InputStream inputStream = file.getInputStream();
 		CSVReader reader = new CSVReaderBuilder(new InputStreamReader(inputStream)).build();
 		reader.skip(1);
+		List<RetailerProductEntity> existingList = new ArrayList();
 		List<RetailerProductEntity> retailerProductEntities = new ArrayList<>();
 		reader.forEach(csvRecord -> {
-				var retailerProductEntity = new RetailerProductEntity();
-				
-				retailerProductEntity.setRetailerProductUid(Optional.ofNullable(csvRecord[1]).filter(uid -> !uid.trim().isEmpty()).map(UUID::fromString).orElseGet(UUID::randomUUID));
-				retailerProductEntity.setRetailerCode(Optional.of(csvRecord[2])
-						.filter(str -> !str.isEmpty() && str.matches("-?\\d+")).map(Long::parseLong).orElse(0L));
-				retailerProductEntity.setStoreCode(Optional.of(csvRecord[3])
-						.filter(str -> !str.isEmpty() && str.matches("-?\\d+")).map(Long::parseLong).orElse(0L));
-				retailerProductEntity.setProductCode(Optional.of(csvRecord[4])
-						.filter(str -> !str.isEmpty() && str.matches("-?\\d+")).map(Long::parseLong).orElse(0L));
-				retailerProductEntity.setProductName(csvRecord[5]);
-				retailerProductEntity.setQuantity(Optional.of(csvRecord[6])
-						.filter(str -> !str.isEmpty() && str.matches("-?\\d+")).map(Integer::parseInt).orElse(0));
-				retailerProductEntity.setPtr(Optional.of(csvRecord[7])
-						.filter(str -> !str.isEmpty() && str.matches("-?\\d+")).map(Double::parseDouble).orElse(0.0));
-				retailerProductEntity.setMrp(Optional.of(csvRecord[8])
-						.filter(str -> !str.isEmpty() && str.matches("-?\\d+")).map(Double::parseDouble).orElse(0.0));
-				
-				DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-				retailerProductEntity.setExpiryDate(LocalDate.parse(csvRecord[9], formatter));
-				retailerProductEntity.setManufacturedDate(LocalDate.parse(csvRecord[10], formatter));
-				retailerProductEntity.setReOrderLevel(Optional.of(csvRecord[11])
-						.filter(str -> !str.isEmpty() && str.matches("-?\\d+")).map(Integer::parseInt).orElse(0));
-				retailerProductEntities.add(retailerProductEntity);		
+			var retailerProductEntity = new RetailerProductEntity();
+
+			retailerProductEntity.setRetailerProductUid(Optional.ofNullable(csvRecord[0])
+					.filter(uid -> !uid.trim().isEmpty()).map(UUID::fromString).orElseGet(UUID::randomUUID));
+			retailerProductEntity.setRetailerCode(Optional.of(csvRecord[1])
+					.filter(str -> !str.isEmpty() && str.matches("-?\\d+")).map(Long::parseLong).orElse(0L));
+			retailerProductEntity.setStoreCode(Optional.of(csvRecord[2])
+					.filter(str -> !str.isEmpty() && str.matches("-?\\d+")).map(Long::parseLong).orElse(0L));
+			retailerProductEntity.setProductCode(Optional.of(csvRecord[3])
+					.filter(str -> !str.isEmpty() && str.matches("-?\\d+")).map(Long::parseLong).orElse(0L));
+			retailerProductEntity.setProductName(csvRecord[4]);
+			retailerProductEntity.setQuantity(Optional.of(csvRecord[5])
+					.filter(str -> !str.isEmpty() && str.matches("-?\\d+")).map(Integer::parseInt).orElse(0));
+			retailerProductEntity.setPtr(Optional.of(csvRecord[6])
+					.filter(str -> !str.isEmpty() && str.matches("-?\\d+")).map(Double::parseDouble).orElse(0.0));
+			retailerProductEntity.setMrp(Optional.of(csvRecord[7])
+					.filter(str -> !str.isEmpty() && str.matches("-?\\d+")).map(Double::parseDouble).orElse(0.0));
+
+			DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+			retailerProductEntity.setExpiryDate(LocalDate.parse(csvRecord[8], formatter));
+			retailerProductEntity.setManufacturedDate(LocalDate.parse(csvRecord[9], formatter));
+			retailerProductEntity.setReOrderLevel(Optional.of(csvRecord[10])
+					.filter(str -> !str.isEmpty() && str.matches("-?\\d+")).map(Integer::parseInt).orElse(0));			
+			retailerProductEntities.add(retailerProductEntity);
 		});
 		retailerProductRepository.saveAllAndFlush(retailerProductEntities);
+		retailerProductEntities.forEach(retailerProductEntity -> {
+			insertStock(retailerProductEntity);
+		});
 	}
 
+	public void insertStock(RetailerProductEntity retailerProductEntity) {
+		var stockEntity = new StockEntity();
+		stockEntity.setStockId(retailerProductMapper.generateCodeIfNotExists(null));
+		stockEntity.setLastUpdatedDate(Timestamp.valueOf(LocalDateTime.now()));
+		stockEntity.setRetailerProductEntity(retailerProductEntity);		
+		stockEntity.setStockIn(retailerProductEntity.getQuantity());		
+		retailerProductRepository.save(retailerProductEntity);
+		stockRepository.save(stockEntity);
+	}
 }
